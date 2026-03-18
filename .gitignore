@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables (secrets)
+.env
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Local Excel files (example data)
+*.xlsx
+
+# VS Code
+.vscode/
+
+# Python virtual environments
+venv/
+.env/
+
+# PyCharm
+.idea/
