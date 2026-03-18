@@ -138,7 +138,11 @@ SALESUP_IMAP_SERVER=imap.example.com
 SALESUP_IMAP_PORT=143
 ```
 
-Jeśli zmienne środowiskowe nie są ustawione, pola w GUI będą puste i trzeba je wypełnić ręcznie.
+Jeśli zmienne środowiskowe nie są ustawione, aplikacja przy starcie pokaże ekran logowania, w którym trzeba podać dane konta e-mail.
+
+Dla wybranych popularnych dostawców (np. Gmail, Outlook/Office365, WP, O2) **aplikacja automatycznie uzupełnia serwery SMTP/IMAP** na podstawie domeny e-mail. Wystarczy podać e-mail i hasło.
+
+Po zalogowaniu możesz wybrać opcję "Zapamiętaj dane logowania" – zapisane dane znajdą się w pliku `~/.salesup_credentials.json` i nie będą dodawane do repozytorium.
 
 ## Formatowanie raportów
 

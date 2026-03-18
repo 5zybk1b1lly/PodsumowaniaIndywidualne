@@ -7,6 +7,7 @@ from src.config.colors import (
     SUCCESS_COLOR, ERROR_COLOR,
     SECONDARY_COLOR, ACCENT_COLOR
 )
+from src.config.credentials import delete_credentials, save_credentials
 from src.config.settings import (
     DEFAULT_EMAIL, DEFAULT_SMTP_SERVER, DEFAULT_SMTP_PORT,
     DEFAULT_IMAP_SERVER, DEFAULT_IMAP_PORT, DEFAULT_PASSWORD,
@@ -122,12 +123,237 @@ class FormatSelectorDialog(QtWidgets.QDialog):
         return self.result
 
 
+class LoginDialog(QtWidgets.QDialog):
+    """Simple login dialog for SMTP/IMAP credentials."""
+
+    # Known provider defaults (domain -> smtp/imap settings)
+    PROVIDER_DEFAULTS = {
+        "salesup.pl": {
+            "smtp_server": "4solution.home.pl",
+            "smtp_port": 587,
+            "imap_server": "4solution.home.pl",
+            "imap_port": 143,
+        },
+        "gmail.com": {
+            "smtp_server": "smtp.gmail.com",
+            "smtp_port": 587,
+            "imap_server": "imap.gmail.com",
+            "imap_port": 143,
+        },
+        "outlook.com": {
+            "smtp_server": "smtp.office365.com",
+            "smtp_port": 587,
+            "imap_server": "outlook.office365.com",
+            "imap_port": 143,
+        },
+        "hotmail.com": {
+            "smtp_server": "smtp.office365.com",
+            "smtp_port": 587,
+            "imap_server": "outlook.office365.com",
+            "imap_port": 143,
+        },
+        "wp.pl": {
+            "smtp_server": "smtp.wp.pl",
+            "smtp_port": 587,
+            "imap_server": "imap.wp.pl",
+            "imap_port": 143,
+        },
+        "o2.pl": {
+            "smtp_server": "smtp.poczta.o2.pl",
+            "smtp_port": 587,
+            "imap_server": "imap.o2.pl",
+            "imap_port": 143,
+        },
+    }
+
+    def __init__(self, initial_credentials=None, parent=None):
+        super().__init__(parent)
+        # set icon if available
+        try:
+            icon = QtGui.QIcon("salesup.png")
+            self.setWindowIcon(icon)
+        except Exception:
+            pass
+        self.setWindowTitle("Logowanie do skrzynki e-mail")
+        self.resize(420, 300)
+
+        self._result = None
+        self._initial = initial_credentials or {}
+
+        self._init_ui()
+        self._fill_initial()
+        self.center(parent)
+
+    def center(self, parent):
+        if parent:
+            geo = parent.geometry()
+            self.move(geo.center() - self.rect().center())
+
+    def _init_ui(self):
+        layout = QtWidgets.QVBoxLayout(self)
+
+        header = QtWidgets.QLabel("🔐 Zaloguj się do skrzynki e-mail")
+        font = header.font()
+        font.setPointSize(14)
+        font.setBold(True)
+        header.setFont(font)
+        layout.addWidget(header)
+
+        form = QtWidgets.QFormLayout()
+        self.entry_email = QtWidgets.QLineEdit()
+        form.addRow("E-mail:", self.entry_email)
+
+        self.entry_password = QtWidgets.QLineEdit()
+        self.entry_password.setEchoMode(QtWidgets.QLineEdit.Password)
+        form.addRow("Hasło:", self.entry_password)
+
+        self.entry_smtp = QtWidgets.QLineEdit()
+        form.addRow("Serwer SMTP:", self.entry_smtp)
+
+        self.entry_smtp_port = QtWidgets.QLineEdit()
+        form.addRow("Port SMTP:", self.entry_smtp_port)
+
+        self.entry_imap = QtWidgets.QLineEdit()
+        form.addRow("Serwer IMAP:", self.entry_imap)
+
+        self.entry_imap_port = QtWidgets.QLineEdit()
+        form.addRow("Port IMAP:", self.entry_imap_port)
+
+        self.save_creds = QtWidgets.QCheckBox("Zapamiętaj dane logowania")
+        layout.addLayout(form)
+        layout.addWidget(self.save_creds)
+
+        btn_layout = QtWidgets.QHBoxLayout()
+        btn_layout.addStretch()
+        login_btn = QtWidgets.QPushButton("Zaloguj")
+        login_btn.clicked.connect(self._on_login)
+        cancel_btn = QtWidgets.QPushButton("Anuluj")
+        cancel_btn.clicked.connect(self.reject)
+        btn_layout.addWidget(login_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+
+    def _fill_initial(self):
+        if not self._initial:
+            return
+        self.entry_email.setText(self._initial.get("email", ""))
+        self.entry_password.setText(self._initial.get("password", ""))
+        self.entry_smtp.setText(self._initial.get("smtp_server", ""))
+        self.entry_smtp_port.setText(str(self._initial.get("smtp_port", "")))
+        self.entry_imap.setText(self._initial.get("imap_server", ""))
+        self.entry_imap_port.setText(str(self._initial.get("imap_port", "")))
+        self.save_creds.setChecked(True)
+
+    def _get_default_servers(self, email: str) -> dict | None:
+        """Try to infer SMTP/IMAP settings from the email domain."""
+        if "@" not in email:
+            return None
+        domain = email.split("@", 1)[1].lower()
+        return self.PROVIDER_DEFAULTS.get(domain)
+
+    def _on_login(self):
+        email = self.entry_email.text().strip()
+        password = self.entry_password.text().strip()
+        smtp = self.entry_smtp.text().strip()
+        smtp_port = self.entry_smtp_port.text().strip()
+        imap = self.entry_imap.text().strip()
+        imap_port = self.entry_imap_port.text().strip()
+
+        if not email or not password:
+            QtWidgets.QMessageBox.critical(self, "Błąd", "Wprowadź adres e-mail i hasło.")
+            return
+
+        # If server settings were not provided, try to infer them from email domain
+        if not smtp or not imap or not smtp_port or not imap_port:
+            inferred = self._get_default_servers(email)
+            if inferred:
+                smtp = smtp or inferred.get("smtp_server", "")
+                smtp_port = smtp_port or str(inferred.get("smtp_port", ""))
+                imap = imap or inferred.get("imap_server", "")
+                imap_port = imap_port or str(inferred.get("imap_port", ""))
+
+        if not all([email, password, smtp, smtp_port, imap, imap_port]):
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Błąd",
+                "Nie udało się automatycznie ustawić serwerów SMTP/IMAP. Wprowadź je ręcznie.",
+            )
+            return
+
+        try:
+            smtp_port_int = int(smtp_port)
+            imap_port_int = int(imap_port)
+        except ValueError:
+            QtWidgets.QMessageBox.critical(self, "Błąd", "Porty muszą być liczbami.")
+            return
+
+        # Try to connect to validate credentials
+        try:
+            service = EmailService(smtp, smtp_port_int, imap, imap_port_int, email, password)
+            service.connect_smtp()
+            service.connect_imap()
+            service.disconnect()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Błąd logowania", f"Nie udało się zalogować:\n{e}")
+            return
+
+        creds = {
+            "email": email,
+            "password": password,
+            "smtp_server": smtp,
+            "smtp_port": smtp_port_int,
+            "imap_server": imap,
+            "imap_port": imap_port_int,
+        }
+
+        if self.save_creds.isChecked():
+            save_credentials(creds)
+        else:
+            delete_credentials()
+
+        self._result = creds
+        self.accept()
+
+    def exec_and_get_credentials(self):
+        # If we already have credentials, try a silent login first
+        if self._initial:
+            try:
+                creds = {
+                    "email": self._initial.get("email", ""),
+                    "password": self._initial.get("password", ""),
+                    "smtp_server": self._initial.get("smtp_server", ""),
+                    "smtp_port": int(self._initial.get("smtp_port", 0)),
+                    "imap_server": self._initial.get("imap_server", ""),
+                    "imap_port": int(self._initial.get("imap_port", 0)),
+                }
+                if all(creds.values()):
+                    service = EmailService(
+                        creds["smtp_server"],
+                        creds["smtp_port"],
+                        creds["imap_server"],
+                        creds["imap_port"],
+                        creds["email"],
+                        creds["password"],
+                    )
+                    service.connect_smtp()
+                    service.connect_imap()
+                    service.disconnect()
+                    return creds
+            except Exception:
+                # fall back to interactive login
+                pass
+
+        if self.exec() == QtWidgets.QDialog.Accepted:
+            return self._result
+        return None
+
+
 class ReportGeneratorWindow(QtWidgets.QMainWindow):
     status_signal = QtCore.Signal(str, str)  # text, color
 
     message_signal = QtCore.Signal(str, str, str)  # kind, title, message
 
-    def __init__(self):
+    def __init__(self, initial_credentials=None):
         super().__init__()
         # optionally icon
         try:
@@ -143,8 +369,25 @@ class ReportGeneratorWindow(QtWidgets.QMainWindow):
         self.column_formats_cache = {}
         self._stop_requested = False
         self._init_ui()
+
+        # Prefill login fields if credentials were provided
+        if initial_credentials:
+            self._fill_credentials(initial_credentials)
+
         self.status_signal.connect(self._update_status)
         self.message_signal.connect(self._show_message)
+
+    def _fill_credentials(self, creds: dict):
+        """Fill login fields with provided credentials."""
+        if not creds:
+            return
+        self.entry_email.setText(creds.get("email", ""))
+        self.entry_login.setText(creds.get("email", ""))
+        self.entry_haslo.setText(creds.get("password", ""))
+        self.entry_smtp.setText(creds.get("smtp_server", ""))
+        self.entry_port.setText(str(creds.get("smtp_port", "")))
+        self.entry_imap.setText(creds.get("imap_server", ""))
+        self.entry_imap_port.setText(str(creds.get("imap_port", "")))
 
     def closeEvent(self, event):
         # Prevent worker thread from updating UI after window is closed
