@@ -198,6 +198,8 @@ def generuj_html_raport(promotor, tydzien, data, report_end_date=None, format_da
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
 </head>
 <body style="margin:0;padding:0;background-color:#EAECEF;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
 
@@ -218,14 +220,19 @@ def generuj_html_raport(promotor, tydzien, data, report_end_date=None, format_da
                     <td style="padding:20px 28px;vertical-align:middle;">
                         {motorola_img}
                     </td>
+                    <!--[if mso]><td style="padding:20px 28px;text-align:right;vertical-align:middle;"><span style="font-size:14px;font-weight:700;color:#FFFFFF;font-family:Arial,sans-serif;">SalesUp</span></td><![endif]-->
+                    <!--[if !mso]><!-->
                     <td style="padding:20px 28px;text-align:right;vertical-align:middle;">
                         {salesup_img}
                     </td>
+                    <!--<![endif]-->
                 </tr>
             </table>
 
             <!-- Blue divider -->
-            <div style="height:3px;background-color:{PRIMARY_COLOR};"></div>
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr><td height="3" style="background-color:{PRIMARY_COLOR};font-size:0;line-height:3px;mso-line-height-rule:exactly;">&nbsp;</td></tr>
+            </table>
 
             <!-- Title block -->
             <table width="100%" cellpadding="0" cellspacing="0">
@@ -239,8 +246,8 @@ def generuj_html_raport(promotor, tydzien, data, report_end_date=None, format_da
                                    letter-spacing:0.5px;">
                             {current_month} &nbsp;&middot;&nbsp; Tydzień {tydzien}
                         </h1>
-                        <span style="display:inline-block;background-color:rgba(46,134,193,0.25);
-                                     border:1px solid rgba(46,134,193,0.6);
+                        <span style="display:inline-block;background-color:#D6EAF8;
+                                     border:1px solid #7BB8DC;
                                      color:#A8CFEA;padding:5px 20px;border-radius:20px;
                                      font-size:13px;letter-spacing:0.5px;">
                             {formatted_date_start} &ndash; {formatted_date_end}

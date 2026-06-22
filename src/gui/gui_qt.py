@@ -201,26 +201,43 @@ class LoginDialog(QtWidgets.QDialog):
 
         form = QtWidgets.QFormLayout()
         self.entry_email = QtWidgets.QLineEdit()
+        self.entry_email.editingFinished.connect(self._auto_fill_servers)
         form.addRow("E-mail:", self.entry_email)
 
         self.entry_password = QtWidgets.QLineEdit()
         self.entry_password.setEchoMode(QtWidgets.QLineEdit.Password)
         form.addRow("Hasło:", self.entry_password)
+        layout.addLayout(form)
+
+        # Advanced toggle button
+        self._adv_toggle = QtWidgets.QPushButton("⚙ Ustawienia zaawansowane ▼")
+        self._adv_toggle.setFlat(True)
+        self._adv_toggle.setCheckable(True)
+        self._adv_toggle.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self._adv_toggle.toggled.connect(self._on_adv_toggle)
+        layout.addWidget(self._adv_toggle)
+
+        # Advanced section (hidden by default)
+        self._adv_widget = QtWidgets.QWidget()
+        adv_form = QtWidgets.QFormLayout(self._adv_widget)
+        adv_form.setContentsMargins(0, 0, 0, 0)
 
         self.entry_smtp = QtWidgets.QLineEdit()
-        form.addRow("Serwer SMTP:", self.entry_smtp)
+        adv_form.addRow("Serwer SMTP:", self.entry_smtp)
 
         self.entry_smtp_port = QtWidgets.QLineEdit()
-        form.addRow("Port SMTP:", self.entry_smtp_port)
+        adv_form.addRow("Port SMTP:", self.entry_smtp_port)
 
         self.entry_imap = QtWidgets.QLineEdit()
-        form.addRow("Serwer IMAP:", self.entry_imap)
+        adv_form.addRow("Serwer IMAP:", self.entry_imap)
 
         self.entry_imap_port = QtWidgets.QLineEdit()
-        form.addRow("Port IMAP:", self.entry_imap_port)
+        adv_form.addRow("Port IMAP:", self.entry_imap_port)
+
+        self._adv_widget.setVisible(False)
+        layout.addWidget(self._adv_widget)
 
         self.save_creds = QtWidgets.QCheckBox("Zapamiętaj dane logowania")
-        layout.addLayout(form)
         layout.addWidget(self.save_creds)
 
         btn_layout = QtWidgets.QHBoxLayout()
@@ -243,6 +260,24 @@ class LoginDialog(QtWidgets.QDialog):
         self.entry_imap.setText(self._initial.get("imap_server", ""))
         self.entry_imap_port.setText(str(self._initial.get("imap_port", "")))
         self.save_creds.setChecked(True)
+
+    def _on_adv_toggle(self, checked: bool):
+        self._adv_widget.setVisible(checked)
+        self._adv_toggle.setText(
+            "⚙ Ustawienia zaawansowane ▲" if checked else "⚙ Ustawienia zaawansowane ▼"
+        )
+        self.adjustSize()
+
+    def _auto_fill_servers(self):
+        """Auto-fill server settings from email domain if fields are empty."""
+        email = self.entry_email.text().strip()
+        if not self.entry_smtp.text() and not self.entry_imap.text():
+            defaults = self._get_default_servers(email)
+            if defaults:
+                self.entry_smtp.setText(defaults.get("smtp_server", ""))
+                self.entry_smtp_port.setText(str(defaults.get("smtp_port", "")))
+                self.entry_imap.setText(defaults.get("imap_server", ""))
+                self.entry_imap_port.setText(str(defaults.get("imap_port", "")))
 
     def _get_default_servers(self, email: str) -> dict | None:
         """Try to infer SMTP/IMAP settings from the email domain."""
